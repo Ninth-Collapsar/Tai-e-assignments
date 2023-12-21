@@ -100,6 +100,8 @@ public abstract class Solver<Node, Fact> {
         }
     }
 
+    // do not repeat yourself.
+
     /**
      * Solves the data-flow problem for given CFG.
      */

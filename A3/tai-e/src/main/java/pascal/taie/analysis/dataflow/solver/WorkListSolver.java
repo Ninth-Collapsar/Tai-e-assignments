@@ -94,6 +94,6 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
         }
     }
 
-    // do not repeat yourself
+    // do not repeat yourself.
 
 }

@@ -26,6 +26,9 @@ import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.graph.cfg.CFG;
 
+import java.util.Queue;
+import java.util.LinkedList;
+
 class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
     WorkListSolver(DataflowAnalysis<Node, Fact> analysis) {
@@ -35,6 +38,33 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
     @Override
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+        Queue<Node> workList = new LinkedList<>();
+        for (Node node : cfg) {
+            if (!cfg.isEntry(node) && !cfg.isExit(node)) {
+                workList.offer(node);
+            }
+        }
+
+        while (!workList.isEmpty()) {
+            Node node = workList.poll();
+            Fact in = result.getInFact(node);
+            Fact out = result.getOutFact(node);
+
+            for (Node predecessor : cfg.getPredsOf(node)) {
+                analysis.meetInto(result.getOutFact(predecessor), in);
+            }
+
+            if (analysis.transferNode(node, in, out)) {
+                for (Node successor : cfg.getSuccsOf(node)) {
+                    if (!cfg.isExit(successor)) {
+                        workList.offer(successor);
+                    }
+                }
+            }
+
+            result.setOutFact(node, out);
+        }
+
     }
 
     @Override

@@ -100,9 +100,9 @@ class CHABuilder implements CGBuilder<Invoke, JMethod> {
                     T.add(m);
                 }
                 // Maybe a control-flow should be added here.
-                workList.addAll(hierarchy.getDirectImplementorsOf(c));
-                workList.addAll(hierarchy.getDirectSubinterfacesOf(c));
-                workList.addAll(hierarchy.getDirectSubclassesOf(c));
+                workList.addAll(hierarchy.getDirectImplementorsOf(cTmp));
+                workList.addAll(hierarchy.getDirectSubinterfacesOf(cTmp));
+                workList.addAll(hierarchy.getDirectSubclassesOf(cTmp));
             }
         }
         return T;

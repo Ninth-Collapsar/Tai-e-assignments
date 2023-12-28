@@ -29,10 +29,9 @@ import pascal.taie.language.classes.ClassHierarchy;
 import pascal.taie.language.classes.JClass;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.language.classes.Subsignature;
+import soot.jimple.toolkits.callgraph.ReachableMethods;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Implementation of the CHA algorithm.
@@ -50,7 +49,24 @@ class CHABuilder implements CGBuilder<Invoke, JMethod> {
     private CallGraph<Invoke, JMethod> buildCallGraph(JMethod entry) {
         DefaultCallGraph callGraph = new DefaultCallGraph();
         callGraph.addEntryMethod(entry);
-        // TODO - finish me
+        // TODO
+        Queue<JMethod> workList = new LinkedList<>();
+        workList.offer(entry);
+
+        while (!workList.isEmpty()) {
+            JMethod m = workList.poll();
+            if (callGraph.addReachableMethod(m)) {
+                List<Invoke> callSites = callGraph.callSitesIn(m).toList();
+                for (Invoke callSite : callSites) {
+                    Set<JMethod> T = resolve(callSite);
+                    for (JMethod jm : T) {
+                        callGraph.addEdge(new Edge<>(CallGraphs.getCallKind(callSite), callSite, jm));
+                        workList.offer(jm);
+                    }
+                }
+            }
+        }
+
         return callGraph;
     }
 
@@ -58,8 +74,38 @@ class CHABuilder implements CGBuilder<Invoke, JMethod> {
      * Resolves call targets (callees) of a call site via CHA.
      */
     private Set<JMethod> resolve(Invoke callSite) {
-        // TODO - finish me
-        return null;
+        // TODO
+        Set<JMethod> T = new HashSet<>();
+        Subsignature s = callSite.getMethodRef().getSubsignature();
+        // JClass c = callSite.getMethodRef().getDeclaringClass();
+        // What written below is a closer style to the slide.
+        // Tips: CallKind k = CallGraphs.getCallKind(callSite);
+
+        if (callSite.isStatic()) {
+            T.add(callSite.getMethodRef().getDeclaringClass().getDeclaredMethod(s));
+        } else if (callSite.isSpecial()) {
+            JClass c = callSite.getMethodRef().getDeclaringClass();
+            JMethod m = dispatch(c, s);
+            if (m != null) {
+                T.add(m);
+            }
+        } else if (callSite.isVirtual() || callSite.isInterface()) {
+            JClass c = callSite.getMethodRef().getDeclaringClass();
+            Queue<JClass> workList = new LinkedList<>();
+            workList.offer(c);
+            while (!workList.isEmpty()) {
+                JClass cTmp = workList.poll();
+                JMethod m = dispatch(cTmp, s);
+                if (m != null) {
+                    T.add(m);
+                }
+                // Maybe a control-flow should be added here.
+                workList.addAll(hierarchy.getDirectImplementorsOf(c));
+                workList.addAll(hierarchy.getDirectSubinterfacesOf(c));
+                workList.addAll(hierarchy.getDirectSubclassesOf(c));
+            }
+        }
+        return T;
     }
 
     /**
@@ -69,7 +115,19 @@ class CHABuilder implements CGBuilder<Invoke, JMethod> {
      * can be found.
      */
     private JMethod dispatch(JClass jclass, Subsignature subsignature) {
-        // TODO - finish me
+        // TODO
+        /*
+          If jclass contains non-abstract method that has the same name
+          and descriptor as m, return this method; (But how about Interface?)
+          else getSubclass of jclass and dispatch it.
+          If there is nothing matchable, return null*/
+        if (jclass != null) {
+            JMethod m = jclass.getDeclaredMethod(subsignature);
+            if (m != null && !m.isAbstract()) {
+                return m;
+            }
+            return dispatch(jclass.getSuperClass(), subsignature);
+        }
         return null;
     }
 }
